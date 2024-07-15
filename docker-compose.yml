@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+    tasks.nginx:
+        networks:
+            - network1
+        ports:
+            - 8085:80
+        image: nginx:stable-alpine
+        volumes:
+            - ./:/app
+            - ./docker/nginx:/etc/nginx/conf.d
+        depends_on:
+            - tasks.php
+        restart: unless-stopped
+
+    tasks.php:
+        networks:
+            - network1
+        working_dir: /app
+        build:
+            dockerfile: docker/php/Dockerfile
+            context: ./
+        volumes:
+            - ./:/app
+        depends_on:
+            - tasks.db
+        restart: unless-stopped
+        dns:
+            - 8.8.8.8
+            - 4.4.4.4
+            - 192.168.0.1
+
+    tasks.db:
+        networks:
+            - network1
+        image: postgres:alpine
+        restart: unless-stopped
+        environment:
+            - POSTGRES_DB=task
+            - POSTGRES_USER=task
+            - POSTGRES_PASSWORD=task
+        volumes:
+            - tasks.db.data:/var/lib/postgresql@16/data
+        ports:
+            - 5535:5432
+
+volumes:
+    tasks.db.data:
+
+networks:
+    network1:
+        driver: bridge
+        driver_opts:
+            com.docker.network.driver.mtu: 1450
